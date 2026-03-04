@@ -5,8 +5,9 @@ from openai import OpenAI
 
 
 # 建议从环境变量读取API Key，避免硬编码
-DASHSCOPE_API_KEY = os.getenv("api_key")
-os.environ["OPENAI_API_KEY"]=os.getenv("api_key")
+DASHSCOPE_API_KEY = "sk-4cf9f15bceea4afda41607e97d7e5db7"
+
+os.environ["OPENAI_API_KEY"]=DASHSCOPE_API_KEY
 os.environ["OPENAI_BASE_URL"] = "https://dashscope.aliyuncs.com/compatible-mode/v1"
 config = {
     # 嵌入模型部分也需要配置，用于向量化记忆
