@@ -1,7 +1,7 @@
 from datetime import date, datetime
 from typing import Optional, List, Dict, Literal
 from pydantic import BaseModel, Field, field_validator
-
+#lujing
 # -------------------- 嵌套子模型 --------------------
 class PersonalInfo(BaseModel):
     """个人信息"""
