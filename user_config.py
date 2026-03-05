@@ -160,41 +160,41 @@ class ChildUserProfile(BaseModel):
         validate_assignment = True  # 赋值时验证
 
 # -------------------- 使用示例 --------------------
-if __name__ == "__main__":
+#if __name__ == "__main__":
     # 创建用户画像实例
-    profile = ChildUserProfile(
-        user_id="child_001",
-        personal_info=PersonalInfo(
-            nickname="小星",
-            birth_date=date(2016, 5, 20),
-            gender="male"
-        ),
-        diagnosis_info=DiagnosisInfo(
-            diagnosis="阿斯伯格综合征",
-            diagnosis_date=date(2020, 3, 15),
-            severity="轻度"
-        ),
-        communication=Communication(
-            mode="verbal",
-            language_level="简单句子",
-            prefers_visual_aids=True,
-            typical_expressions=["我要火车", "不喜欢"]
-        ),
-        interests=Interests(
-            special_interests=["火车", "数字"],
-            preferred_topics=["火车时刻表", "数字游戏"],
-            favorite_activities=["拼图", "看火车视频"]
-        ),
-        emotional_behavior=EmotionalBehavior(
-            common_emotions=["焦虑", "兴奋"],
-            triggers=["计划改变", "大声响"],
-            calming_strategies=["拥抱", "听安静音乐"]
-        )
+profile = ChildUserProfile(
+    user_id="child_001",
+    personal_info=PersonalInfo(
+        nickname="小星",
+        birth_date=date(2016, 5, 20),
+        gender="male"
+    ),
+    diagnosis_info=DiagnosisInfo(
+        diagnosis="阿斯伯格综合征",
+        diagnosis_date=date(2020, 3, 15),
+        severity="轻度"
+    ),
+    communication=Communication(
+        mode="verbal",
+        language_level="简单句子",
+        prefers_visual_aids=True,
+        typical_expressions=["我要火车", "不喜欢"]
+    ),
+    interests=Interests(
+        special_interests=["火车", "数字"],
+        preferred_topics=["火车时刻表", "数字游戏"],
+        favorite_activities=["拼图", "看火车视频"]
+    ),
+    emotional_behavior=EmotionalBehavior(
+        common_emotions=["焦虑", "兴奋"],
+        triggers=["计划改变", "大声响"],
+        calming_strategies=["拥抱", "听安静音乐"]
     )
+)
 
     # 自动计算年龄
-    print(f"年龄: {profile.personal_info.age}")  # 输出：年龄: 8（取决于当前日期）
+    # print(f"年龄: {profile.personal_info.age}")  # 输出：年龄: 8（取决于当前日期）
 
 
-    # 输出JSON（排除未设置的字段）
-    print(profile.model_dump_json(indent=2, exclude_none=True))
+    # # 输出JSON（排除未设置的字段）
+    # print(profile.model_dump_json(indent=2, exclude_none=True))
