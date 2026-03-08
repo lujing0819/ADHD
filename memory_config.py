@@ -36,6 +36,8 @@ config = {
 
 # 从配置初始化 Mem0
 memory= Memory.from_config(config)
+ 
+ 
 
 config = {  
     "llm": {
@@ -60,7 +62,14 @@ config = {
             "username": "neo4j",  
             "password": "neo4jneo4j",  
         }  
-    },  
+    }, 
+    "vector_store": {   # 添加显式配置，避免使用默认的 Qdrant
+        "provider": "faiss",
+        "config": {
+            "path": "./faiss_index_graph",
+            "embedding_model_dims": 1024,
+        }
+    },
 }  
   
 m_graph = Memory.from_config(config_dict=config)  
