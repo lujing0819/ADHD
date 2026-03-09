@@ -1,10 +1,25 @@
 import datetime
 import json
-from memory_config import memory#, m_graph
+from memory_config import memory, m_graph
 import os   
 from langchain_core.messages import HumanMessage, AIMessage
 from qwen_config import llm
-def summary_memory(user_id,memory_dir="memory"):
+def read_summary(user_id):
+    path_dir=f"profile\\{user_id}"
+    files = [f for f in os.listdir(path_dir)]  
+    files_sorted = sorted(files,key=lambda f: os.path.getmtime(os.path.join(path_dir, f)),reverse=True)
+    for file_name in files_sorted:
+        file_path = os.path.join(path_dir, file_name)
+        if os.path.getsize(file_path) > 0:          # 检查文件大小是否大于0
+            with open(file_path, "r", encoding="utf-8") as f:
+                content= f.read()
+            return content
+    return ""
+# result=read_summary("123")
+# print (result)
+
+
+def summary_memory(user_id,memory_dir="chatlog"):
     files = [f for f in os.listdir(memory_dir) if f.startswith(user_id)]  
     files_sorted = sorted(files,key=lambda f: os.path.getmtime(os.path.join(memory_dir, f)),reverse=True)
     accumulated_text = ""
@@ -32,8 +47,7 @@ def summary_memory(user_id,memory_dir="memory"):
             break  # 已达到目标，停止读取后续文件
     abstract=llm.invoke(f"{accumulated_text} 根据上述内容，总结用户画像,直接输出用户画像，不要输出其他无关内容").content
     return abstract
-# abstract=summary_memory(user_id="123") 
-# print (abstract)
+ 
 
 
 def convert_to_langchain_messages(raw_messages):
@@ -74,11 +88,13 @@ def add_message_to_memory(messages, user_id):
     try:
         memory.add(messages=messages, user_id=user_id)
     except Exception as e:
-        print(f"Error adding message to memory: {e}")
+        #print(f"Error adding message to memory: {e}")
+        pass
     try:
         m_graph.add(messages=messages, user_id=user_id)
     except Exception as e:
-        print(f"Error adding message to graph: {e}")
+        #print(f"Error adding message to graph: {e}")
+        pass
 def search_memory(query, user_id, top_k=5):
     """从记忆中搜索相关信息"""
     try:
@@ -152,7 +168,7 @@ def log_interaction(session_file, user_id, user_input, assistant_reply,
         time = now.strftime("%H:%M:%S")
 
     # 1. 每日日志（每个用户一个 Markdown 文件）
-    daily_log_path = f"memory/{user_id}_{date}.md"
+    daily_log_path = f"chatlog/{user_id}_{date}.md"
     daily_entry = f"### {time} [用户: {user_id}]\n"
     daily_entry += f"**用户**: {user_input}\n"
     daily_entry += f"**助手**: {assistant_reply}\n\n"
