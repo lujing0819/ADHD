@@ -31,6 +31,15 @@ tools = [tool]
 #result=tool.invoke("今天北京的天气")  # 预热工具，确保首次调用时响应更快
 
 user_id="123"
+agent_id="agent_001"
+os.mkdir("context",exist_ok=True)  # 存储上下文信息的目录
+os.mkdir(os.path.join("context", user_id,"history"),exist_ok=True)   
+os.mkdir(os.path.join("context", user_id,"memory"),exist_ok=True)  
+os.mkdir(os.path.join("context", user_id,"tool"),exist_ok=True)   
+os.mkdir(os.path.join("context", user_id,"profile"),exist_ok=True)  
+ 
+
+
 profile_abstract = read_summary(user_id=user_id)
 system_prompt = """你是一个儿童阿斯伯格症状分析助手，专门帮助孩子走出困境。
 这是孩子的用户画像：{profile_abstract}。
@@ -48,10 +57,7 @@ agent = create_agent(
 # 若希望手动输入，可取消下一行注释：
 # USER_ID = input("请输入用户ID: ").strip() or USER_ID
 
-# ---------- 创建目录 ----------
-os.makedirs("chatlog", exist_ok=True)
-os.makedirs("sessions", exist_ok=True)
-os.makedirs("profile", exist_ok=True)
+
 # ---------- 会话日志文件（每个用户一个会话文件）----------
 session_id = datetime.datetime.now().strftime("%Y%m%d_%H%M%S")
 session_log_path = f"sessions/{user_id}_{session_id}.jsonl"

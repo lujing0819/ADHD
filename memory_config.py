@@ -13,7 +13,7 @@ config = {
     "llm": {
         "provider": "openai",
         "config": {
-            "model": "qwen-plus",
+            "model": "qwen3.5-plus",
             "temperature": 0.2,
             "max_tokens": 2000,
         }
@@ -36,8 +36,9 @@ config = {
 
 # 从配置初始化 Mem0
 memory= Memory.from_config(config)
- 
- 
+result=memory.add(messages="中国的首都是北京", user_id="123")
+print (result)
+asd
 
 config = {  
     "llm": {
