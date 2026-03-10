@@ -11,6 +11,8 @@ import json
 from collections import deque
 from mem0 import Memory,AsyncMemory
 import concurrent.futures
+from utils import message_to_role_content
+from qwen_config import llm
 class Context(ABC):
     """上下文抽象基类，所有具体上下文必须实现读写方法。"""
     
@@ -127,7 +129,7 @@ class HistoryContext(Context):
 
 
 
-    def write(self, message: Dict[str, str], **kwargs) -> None:
+    def write(self, messages, **kwargs) -> None:
         """
         写入一条消息，格式如 {"role": "user", "content": "..."}。
         若超过最大长度，自动移除最早的消息。
@@ -137,8 +139,10 @@ class HistoryContext(Context):
             target_file = latest
         else:
             target_file = self._new_file_path(self.history_dir, prefix="history")
+        results=[ message_to_role_content(s) for s in messages]
+        results=[ json.dumps(s, ensure_ascii=False) for s in results]
         with open(target_file, "a", encoding="utf-8") as f:
-            f.write(json.dumps(message, ensure_ascii=False) + "\n")
+            f.writelines("\n".join(results)+"\n")
 
 class MemoryContext(Context):
     """记忆上下文，存储键值对形式的长期记忆。"""
@@ -202,10 +206,12 @@ class MemoryContext(Context):
             # 清空临时文件
             open(self.tmp_file, "w", encoding="utf-8").close()
 
-    def write(self, message: Dict[str, str], **kwargs) -> None: 
+    def write(self, messages, **kwargs) -> None: 
         """写入或更新一个键值对。"""
+        results=[ message_to_role_content(s) for s in messages]
+        results=[json.dumps(s, ensure_ascii=False) for s in results]
         with open(self.tmp_file, "a", encoding="utf-8") as f:
-            f.write(str(message) + "\n")
+            f.writelines("\n".join(results) + "\n")
         self.executor.submit(self.my_write)
   
 
@@ -215,7 +221,7 @@ class ToolContext(Context):
     def __init__(self, userid: str, agentid: str):
         super().__init__(userid, agentid)
         self._calls: List[Dict[str, Any]] = []
-    
+        self.tool_dir = self._get_subdir("tool")
     def read(self, limit: Optional[int] = None, **kwargs) -> List[Dict[str, Any]]:
         """
         读取工具调用记录。
@@ -225,11 +231,25 @@ class ToolContext(Context):
             return self._calls.copy()
         return self._calls[-limit:]
     
-    def write(self, tool_call: Dict[str, Any], **kwargs) -> None:
-        """
-        记录一次工具调用，包含工具名称、参数、结果等。
-        """
-        self._calls.append(tool_call)
+    def write(self, msgs, **kwargs) -> None:
+        flag=False
+        for msg in msgs:
+            if str(type(msg)) == "<class 'langchain_core.messages.tool.ToolMessage'>":
+                flag=True
+                self._calls.append(msg)
+        if flag:
+            result=[message_to_role_content(msg[0]),message_to_role_content(msg[-1])]
+        else:
+            return 
+        result=[json.dumps(s, ensure_ascii=False) for s in result]
+        latest = self._get_latest_file(self.tool_dir)
+        if latest and self._is_within_last_hour(latest):
+            target_file = latest
+        else:
+            target_file = self._new_file_path(self.tool_dir, prefix="tool")
+        with open(target_file, "a", encoding="utf-8") as f:
+            f.writelines("\n".join(result) + "\n")
+
 
 
 class ProfileContext(Context):
@@ -237,20 +257,51 @@ class ProfileContext(Context):
     
     def __init__(self, userid: str, agentid: str):
         super().__init__(userid, agentid)
-        self._profile: Dict[str, Any] = {}
-    
-    def read(self, key: Optional[str] = None, **kwargs) -> Any:
+        self.tmp_file =self._get_subdir("profile")/ "tmp.txt"
+        from concurrent.futures import ThreadPoolExecutor
+        self.executor = ThreadPoolExecutor(max_workers=2) 
+        self.profile_dir = self._get_subdir("profile")
+
+
+    def read(self, messages, **kwargs) -> Any:
         """
         读取画像属性。
         :param key: 若指定，返回对应属性值；若为 None，返回全部画像。
         """
-        if key is None:
-            return self._profile.copy()
-        return self._profile.get(key)
+ 
     
-    def write(self, key: str, value: Any, **kwargs) -> None:
-        """设置或更新画像属性。"""
-        self._profile[key] = value
+    def my_write(self,limit=20) -> None:
+        def count_lines(filename):
+            """返回文件的行数"""
+            with open(filename, 'r', encoding='utf-8') as f:
+                return sum(1 for _ in f)
+        if count_lines(self.tmp_file) >= limit:   
+            with open(self.tmp_file, "r", encoding="utf-8") as f:
+                lines=f.readlines()
+                lines=[eval(line.strip()) for line in lines if line.strip() and len(line.strip())>0]
+            content="\n".join(lines)
+            profile=llm.invoke(f"{content} 根据上述内容，总结出用户画像")
+            latest = self._get_latest_file(self.profile_dir)
+            if latest and self._is_within_last_hour(latest):
+                target_file = latest
+            else:
+                target_file = self._new_file_path(self.profile_dir, prefix="profile")
+            with open(target_file,"w",encoding="utf-8") as f:
+                f.writelines(profile)
+
+            # 清空临时文件
+            open(self.tmp_file, "w", encoding="utf-8").close()
+
+    def write(self, messages, **kwargs) -> None: 
+        """写入或更新一个键值对。"""
+        results=[ message_to_role_content(s) for s in messages]
+        results=[ s for s in results if s['role']=="user"]
+        with open(self.tmp_file, "a", encoding="utf-8") as f:
+            f.writelines("\n".join(results) + "\n")
+        self.executor.submit(self.my_write)
+
+
+
 
 
 # ========== 可选的管理类，用于统一获取上下文实例 ==========
