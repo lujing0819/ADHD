@@ -11,6 +11,7 @@ import os
 from langchain.agents import create_agent
 from langchain_core.messages import HumanMessage
 from utils import message_to_role_content
+from context import ContextList
 os.environ["TAVILY_API_KEY"] = "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"
  
 
@@ -36,6 +37,7 @@ agent_id="agent_001"
 # 请根据这个画像和孩子聊天，帮助孩子更好地表达自己，并提供一些建议。
 # 因为是聊天场景，回复尽可能简单明了，适合孩子理解，尽量不要超过20个字。"""
  
+ctx_List=ContextList(["history","memory","tool","profile"],agent_id,user_id)
 agent = create_agent(
     model=llm,
     tools=tools,
@@ -70,13 +72,9 @@ while True:
     last_message = updated_messages[-1]
     print("助手回复：", last_message.content)
     new_messages = updated_messages[prev_msg_count:]  # 获取本轮新增的消息
+    ctx_List.write(new_messages)
     prev_msg_count = len(updated_messages)  # 更新消息总数
-    #print (new_messages)
-    for msg in new_messages:
-        print (type(msg))
-        print (message_to_role_content(msg))
-        print ("---"*10)
-        print ("\n")
+ 
     # 记录日志（只需一行函数调用）
     # prev_msg_count = log_interaction(
     #     session_file=session_file,

@@ -99,6 +99,14 @@ class Context(ABC):
     def __repr__(self) -> str:
         return f"<{self.__class__.__name__} userid={self.userid} agentid={self.agentid}>"
 
+class ContextList:
+    def __init__(self,namelist,agentID,userID):
+        self.manager = ContextManager()
+        self.ctx_list=[ self.manager.get_context(userID,agentID,s) for s in namelist]
+        self.namelist=namelist
+    def write(self,messages):
+        for ctx in self.ctx_list:
+            ctx.write(messages)
 
 class HistoryContext(Context):
     """对话历史上下文，存储消息列表。"""
@@ -310,7 +318,6 @@ class ContextManager:
     
     def __init__(self):
         self._contexts: Dict[str, Context] = {}
-    
     def get_context(self, userid: str, agentid: str, context_type: str) -> Context:
         """
         根据用户ID、代理ID和类型获取上下文实例。
@@ -337,32 +344,32 @@ class ContextManager:
 # ========== 使用示例 ==========
 if __name__ == "__main__":
     # 创建具体上下文
-    # history = HistoryContext("user123", "agentA")
-    # history.write({"role": "user", "content": "Hello"})
-    # history.write({"role": "assistant", "content": "Hi there!"})
-    # print("History:", history.read())
+    # # history = HistoryContext("user123", "agentA")
+    # # history.write({"role": "user", "content": "Hello"})
+    # # history.write({"role": "assistant", "content": "Hi there!"})
+    # # print("History:", history.read())
     
-    memory = MemoryContext("user123", "agentA")
-    #{"role":"user","content":user_input}, {"role":"assistant","content":last_message.content}
-    memory.write({"role": "user", "content": "你好，我今天的肚子特别疼，请问那里有药店"})
-    memory.write({"role": "user", "content": "中国的首都是北京"})
-    memory.write({"role": "user", "content": "我现在在上海"})
-    print ("aaa")
+    # memory = MemoryContext("user123", "agentA")
+    # #{"role":"user","content":user_input}, {"role":"assistant","content":last_message.content}
+    # memory.write({"role": "user", "content": "你好，我今天的肚子特别疼，请问那里有药店"})
+    # memory.write({"role": "user", "content": "中国的首都是北京"})
+    # memory.write({"role": "user", "content": "我现在在上海"})
+    # print ("aaa")
 
-    #print (memory.memory.get_all(user_id="user123"))
-    #print("Memory (name):", memory.read("中国"))
+    # #print (memory.memory.get_all(user_id="user123"))
+    # #print("Memory (name):", memory.read("中国"))
     
-    # tool = ToolContext("user123", "agentA")
-    # tool.write({"tool": "weather", "args": {"city": "Beijing"}, "result": "Sunny"})
-    # print("Tool calls:", tool.read())
+    # # tool = ToolContext("user123", "agentA")
+    # # tool.write({"tool": "weather", "args": {"city": "Beijing"}, "result": "Sunny"})
+    # # print("Tool calls:", tool.read())
     
-    # profile = ProfileContext("user123", "agentA")
-    # profile.write("language", "zh-CN")
-    # print("Profile:", profile.read())
+    # # profile = ProfileContext("user123", "agentA")
+    # # profile.write("language", "zh-CN")
+    # # print("Profile:", profile.read())
     
     # # 使用管理器
-    # manager = ContextManager()
-    # ctx1 = manager.get_context("user123", "agentA", "history")
-    # ctx1.write({"role": "user", "content": "Another message"})
-    # ctx2 = manager.get_context("user123", "agentA", "history")  # 相同键会返回同一个实例（如果有缓存）
-    # print("Same instance?", ctx1 is ctx2)  # True 如果缓存生效
+    manager = ContextManager()
+    ctx1 = manager.get_context("user123", "agentA", "history")
+    ctx1.write({"role": "user", "content": "Another message"})
+    ctx2 = manager.get_context("user123", "agentA", "history")  # 相同键会返回同一个实例（如果有缓存）
+    print("Same instance?", ctx1 is ctx2)  # True 如果缓存生效
