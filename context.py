@@ -246,7 +246,7 @@ class ToolContext(Context):
                 flag=True
                 self._calls.append(msg)
         if flag:
-            result=[message_to_role_content(msg[0]),message_to_role_content(msg[-1])]
+            result=[message_to_role_content(msgs[0]),message_to_role_content(msgs[-1])]
         else:
             return 
         result=[json.dumps(s, ensure_ascii=False) for s in result]
@@ -303,7 +303,7 @@ class ProfileContext(Context):
     def write(self, messages, **kwargs) -> None: 
         """写入或更新一个键值对。"""
         results=[ message_to_role_content(s) for s in messages]
-        results=[ s for s in results if s['role']=="user"]
+        results=[ json.dumps(s,ensure_ascii=False) for s in results if s['role']=="user"]
         with open(self.tmp_file, "a", encoding="utf-8") as f:
             f.writelines("\n".join(results) + "\n")
         self.executor.submit(self.my_write)
