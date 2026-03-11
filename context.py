@@ -150,7 +150,7 @@ class HistoryContext(Context):
         results=[ message_to_role_content(s) for s in messages]
         results=[ json.dumps(s, ensure_ascii=False) for s in results]
         with open(target_file, "a", encoding="utf-8") as f:
-            f.writelines("\n".join(results)+"\n")
+            f.writelines( str(results)+"\n")
 
 class MemoryContext(Context):
     """记忆上下文，存储键值对形式的长期记忆。"""
@@ -240,15 +240,8 @@ class ToolContext(Context):
         return self._calls[-limit:]
     
     def write(self, msgs, **kwargs) -> None:
-        flag=False
-        for msg in msgs:
-            if str(type(msg)) == "<class 'langchain_core.messages.tool.ToolMessage'>":
-                flag=True
-                self._calls.append(msg)
-        if flag:
-            result=[message_to_role_content(msgs[0]),message_to_role_content(msgs[-1])]
-        else:
-            return 
+        result=[message_to_role_content(s) for s in msgs if str(type(s)) == "<class 'langchain_core.messages.tool.ToolMessage'>"]
+         
         result=[json.dumps(s, ensure_ascii=False) for s in result]
         latest = self._get_latest_file(self.tool_dir)
         if latest and self._is_within_last_hour(latest):
@@ -343,6 +336,7 @@ class ContextManager:
 
 # ========== 使用示例 ==========
 if __name__ == "__main__":
+    pass
     # 创建具体上下文
     # # history = HistoryContext("user123", "agentA")
     # # history.write({"role": "user", "content": "Hello"})
@@ -368,8 +362,8 @@ if __name__ == "__main__":
     # # print("Profile:", profile.read())
     
     # # 使用管理器
-    manager = ContextManager()
-    ctx1 = manager.get_context("user123", "agentA", "history")
-    ctx1.write({"role": "user", "content": "Another message"})
-    ctx2 = manager.get_context("user123", "agentA", "history")  # 相同键会返回同一个实例（如果有缓存）
-    print("Same instance?", ctx1 is ctx2)  # True 如果缓存生效
+    # manager = ContextManager()
+    # ctx1 = manager.get_context("user123", "agentA", "history")
+    # ctx1.write({"role": "user", "content": "Another message"})
+    # ctx2 = manager.get_context("user123", "agentA", "history")  # 相同键会返回同一个实例（如果有缓存）
+    # print("Same instance?", ctx1 is ctx2)  # True 如果缓存生效

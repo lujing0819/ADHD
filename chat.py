@@ -37,7 +37,8 @@ agent_id="agent_001"
 # 请根据这个画像和孩子聊天，帮助孩子更好地表达自己，并提供一些建议。
 # 因为是聊天场景，回复尽可能简单明了，适合孩子理解，尽量不要超过20个字。"""
  
-ctx_List=ContextList(["history","memory","tool","profile"],agent_id,user_id)
+#ctx_List=ContextList(["history","memory","tool","profile"],agent_id,user_id)
+ctx_List=ContextList(["history","tool"],agent_id,user_id)
 agent = create_agent(
     model=llm,
     tools=tools,
@@ -57,34 +58,11 @@ while True:
     # 构造状态并调用 agent（假设 agent 已定义）
     user_msg = HumanMessage(content=user_input)
 
-    # knowledge_message = search_memory(user_id=user_id, query=user_input)   
-    # if knowledge_message:
-    #     initial_state["messages"].append(HumanMessage(content=f"相关对话知识记忆：{knowledge_message}"))
-
-    # recent_session = read_session_log(user_id=user_id)
-    # if recent_session:
-    #     initial_state["messages"].extend(recent_session)
-
-
     initial_state = {"messages": messages + [user_msg]}
+    print ("user_input:",user_input)
     final_state = agent.invoke(initial_state)   
-    updated_messages = final_state["messages"]
-    last_message = updated_messages[-1]
-    print("助手回复：", last_message.content)
-    new_messages = updated_messages[prev_msg_count:]  # 获取本轮新增的消息
+    messages=final_state["messages"]
+    print ("智能体回复",messages[-1])
+    new_messages = messages[prev_msg_count:]  
     ctx_List.write(new_messages)
-    prev_msg_count = len(updated_messages)  # 更新消息总数
- 
-    # 记录日志（只需一行函数调用）
-    # prev_msg_count = log_interaction(
-    #     session_file=session_file,
-    #     user_id=user_id,
-    #     user_input=user_input,
-    #     assistant_reply=last_message.content,
-    #     updated_messages=updated_messages,
-    #     prev_msg_count=prev_msg_count
-    # )
-    # messages = updated_messages   # 更新历史
-    # memory_message=[{"role":"user","content":user_input}, {"role":"assistant","content":last_message.content}]
-    # t = threading.Thread(target=add_message_to_memory, kwargs={"messages":memory_message, "user_id": user_id})
-    # t.start()
+    prev_msg_count = len(messages)  
