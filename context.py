@@ -47,7 +47,8 @@ class Context(ABC):
 
     def _get_latest_file(self, directory: Path) -> Optional[Path]:
         """返回目录中最后修改时间最新的文件，如果没有则返回 None。"""
-        files = [f for f in directory.iterdir() if f.is_file()]
+        files = [f for f in directory.iterdir() if f.is_file() and "tmp" not in f.name]
+ 
         if not files:
             return None
         return max(files, key=lambda f: f.stat().st_mtime)
@@ -116,7 +117,7 @@ class HistoryContext(Context):
         self.maxlen = maxlen
         self.history_dir = self._get_subdir("history")
     
-    def read(self, limit: Optional[int] = 10, **kwargs) -> List[Dict[str, str]]:
+    def read(self, limit= 10, **kwargs) -> List[Dict[str, str]]:
         """读取所有历史消息，并按文件修改时间合并返回。"""
         files = [f for f in self.history_dir.iterdir() if f.is_file()]
         files.sort(key=lambda f: f.stat().st_mtime, reverse=True)
@@ -271,17 +272,18 @@ class ProfileContext(Context):
         """
  
     
-    def my_write(self,limit=20) -> None:
+    def my_write(self,limit=5) -> None:
         def count_lines(filename):
             """返回文件的行数"""
             with open(filename, 'r', encoding='utf-8') as f:
                 return sum(1 for _ in f)
         if count_lines(self.tmp_file) >= limit:   
+ 
             with open(self.tmp_file, "r", encoding="utf-8") as f:
                 lines=f.readlines()
-                lines=[eval(line.strip()) for line in lines if line.strip() and len(line.strip())>0]
+            lines=[json.loads(line.strip())['content'] for line in lines if len(line.strip())>0]
             content="\n".join(lines)
-            profile=llm.invoke(f"{content} 根据上述内容，总结出用户画像")
+            profile=llm.invoke(f"{content} 根据上述内容，总结出用户画像").content
             latest = self._get_latest_file(self.profile_dir)
             if latest and self._is_within_last_hour(latest):
                 target_file = latest
@@ -295,12 +297,12 @@ class ProfileContext(Context):
 
     def write(self, messages, **kwargs) -> None: 
         """写入或更新一个键值对。"""
+ 
         results=[ message_to_role_content(s) for s in messages]
         results=[ json.dumps(s,ensure_ascii=False) for s in results if s['role']=="user"]
         with open(self.tmp_file, "a", encoding="utf-8") as f:
             f.writelines("\n".join(results) + "\n")
         self.executor.submit(self.my_write)
-
 
 
 

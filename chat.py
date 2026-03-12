@@ -38,7 +38,7 @@ agent_id="agent_001"
 # 因为是聊天场景，回复尽可能简单明了，适合孩子理解，尽量不要超过20个字。"""
  
 #ctx_List=ContextList(["history","memory","tool","profile"],agent_id,user_id)
-ctx_List=ContextList(["history","tool"],agent_id,user_id)
+ctx_List=ContextList(["profile"],agent_id,user_id)
 agent = create_agent(
     model=llm,
     tools=tools,
@@ -62,7 +62,7 @@ while True:
     print ("user_input:",user_input)
     final_state = agent.invoke(initial_state)   
     messages=final_state["messages"]
-    print ("智能体回复",messages[-1])
+    print ("智能体回复",messages[-1].content)
     new_messages = messages[prev_msg_count:]  
     ctx_List.write(new_messages)
     prev_msg_count = len(messages)  
