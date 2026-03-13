@@ -1,4 +1,19 @@
 from datetime import datetime
+from langchain_core.messages import AIMessage, HumanMessage,ToolMessage
+def role_content_to_message(role_content):
+    role = role_content.get("role")
+    content = role_content.get("content")
+    name = role_content.get("name", None)
+    if role == "assistant":
+        return AIMessage(content=content)
+    elif role == "user":
+        return HumanMessage(content=content)
+    elif role == "tool":
+        return ToolMessage(content=content, name=name)
+    else:
+        raise ValueError(f"Unknown role: {role}")
+
+
 def message_to_role_content(message):
     role_map = {
         "AIMessage": "assistant",

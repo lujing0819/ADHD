@@ -9,10 +9,14 @@ from datetime import datetime, timezone
 from typing import Optional, Any, Dict, List
 import json
 from collections import deque
-from mem0 import Memory,AsyncMemory
-import concurrent.futures
-from utils import message_to_role_content
+from mem0 import Memory
+from utils import message_to_role_content,role_content_to_message
 from qwen_config import llm
+from langchain_core.messages import AIMessage, HumanMessage,ToolMessage
+from langchain_community.vectorstores import Chroma
+from langchain_community.embeddings import DashScopeEmbeddings
+from langchain_core.documents import Document
+os.environ["DASHSCOPE_API_KEY"]=os.getenv("api_key")
 class Context(ABC):
     """上下文抽象基类，所有具体上下文必须实现读写方法。"""
     
@@ -117,8 +121,8 @@ class HistoryContext(Context):
         self.maxlen = maxlen
         self.history_dir = self._get_subdir("history")
     
-    def read(self, limit= 10, **kwargs) -> List[Dict[str, str]]:
-        """读取所有历史消息，并按文件修改时间合并返回。"""
+    def read(self, limit= 2, **kwargs) -> List[Dict[str, str]]:
+        """读取最近对话的信息，并按文件修改时间合并返回。"""
         files = [f for f in self.history_dir.iterdir() if f.is_file()]
         files.sort(key=lambda f: f.stat().st_mtime, reverse=True)
         messages = []
@@ -128,12 +132,12 @@ class HistoryContext(Context):
             lines = self._read_lines_from_file(file_path, max_lines=remaining)
             if not lines:
                 continue
-            # 将行解析为消息，并插入到结果列表前面以保持整体升序
-            msgs = [json.loads(line) for line in lines]
-            messages = msgs + messages
-            remaining -= len(msgs)
-            if remaining <= 0:
-                break
+            msgs = [eval(line) for line in lines]
+            for msg in reversed(msgs):
+                for s in reversed(msg):
+                    messages=[role_content_to_message(json.loads(s))]+messages
+                    if len(messages)/2>=limit:
+                        return messages
         return messages
 
 
@@ -201,7 +205,7 @@ class MemoryContext(Context):
         :param key: 若指定，返回对应键的值；若为 None，返回全部记忆。
         """
         memory_results= self.memory.search(query=query, user_id=self.userid, limit=limit)["results"]
-        return memory_results
+        return [ HumanMessage(content=s['memory']) for s in memory_results]
     def my_write(self,limit=3) -> None:
         def count_lines(filename):
             """返回文件的行数"""
@@ -231,6 +235,9 @@ class ToolContext(Context):
         super().__init__(userid, agentid)
         self._calls: List[Dict[str, Any]] = []
         self.tool_dir = self._get_subdir("tool")
+        embedding_model = DashScopeEmbeddings(model="text-embedding-v3")
+        self.vector_db = Chroma(persist_directory=str(self.tool_dir/"db") ,embedding_function=embedding_model)
+
     def read(self, limit: Optional[int] = None, **kwargs) -> List[Dict[str, Any]]:
         """
         读取工具调用记录。
@@ -239,18 +246,26 @@ class ToolContext(Context):
         if limit is None:
             return self._calls.copy()
         return self._calls[-limit:]
-    
+
     def write(self, msgs, **kwargs) -> None:
-        result=[message_to_role_content(s) for s in msgs if str(type(s)) == "<class 'langchain_core.messages.tool.ToolMessage'>"]
-         
-        result=[json.dumps(s, ensure_ascii=False) for s in result]
-        latest = self._get_latest_file(self.tool_dir)
-        if latest and self._is_within_last_hour(latest):
-            target_file = latest
-        else:
-            target_file = self._new_file_path(self.tool_dir, prefix="tool")
-        with open(target_file, "a", encoding="utf-8") as f:
-            f.writelines("\n".join(result) + "\n")
+        contents=[message_to_role_content(s)['content'] for s in msgs if str(type(s)) == "<class 'langchain_core.messages.tool.ToolMessage'>"]
+        for data in contents:
+            data=json.loads(data)
+            print (data)
+            print (type(data))
+            query=str(data['query'])
+            results=str(data['results'])
+            doc = Document(page_content=query,metadata={"output":results})
+            self.vector_db.add_documents([doc])
+        self.vector_db.persist()
+        # result=[json.dumps(s, ensure_ascii=False) for s in result]
+        # latest = self._get_latest_file(self.tool_dir)
+        # if latest and self._is_within_last_hour(latest):
+        #     target_file = latest
+        # else:
+        #     target_file = self._new_file_path(self.tool_dir, prefix="tool")
+        # with open(target_file, "a", encoding="utf-8") as f:
+        #     f.writelines("\n".join(result) + "\n")
 
 
 

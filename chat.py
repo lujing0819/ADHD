@@ -5,12 +5,12 @@ import os
 from typing import TypedDict, Annotated, Sequence
 import operator
 from langchain_core.messages import BaseMessage, HumanMessage
-from langchain_openai import ChatOpenAI
+ 
 from langchain_tavily import TavilySearch
 import os
 from langchain.agents import create_agent
 from langchain_core.messages import HumanMessage
-from utils import message_to_role_content
+ 
 from context import ContextList
 os.environ["TAVILY_API_KEY"] = "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"
  
@@ -38,7 +38,7 @@ agent_id="agent_001"
 # 因为是聊天场景，回复尽可能简单明了，适合孩子理解，尽量不要超过20个字。"""
  
 #ctx_List=ContextList(["history","memory","tool","profile"],agent_id,user_id)
-ctx_List=ContextList(["profile"],agent_id,user_id)
+ctx_List=ContextList(["tool"],agent_id,user_id)
 agent = create_agent(
     model=llm,
     tools=tools,
