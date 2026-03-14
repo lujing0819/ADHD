@@ -8,6 +8,6 @@ import os
 llm = ChatOpenAI(
     model="qwen3.5-plus",
     base_url='https://dashscope.aliyuncs.com/compatible-mode/v1',
-    api_key="sk-4cf9f15bceea4afda41607e97d7e5db7"
+    api_key=os.getenv("api_key")
 )
  
