@@ -17,6 +17,7 @@ from langchain_community.vectorstores import Chroma
 from langchain_community.embeddings import DashScopeEmbeddings
 from langchain_core.documents import Document
 from langchain.tools import tool
+from concurrent.futures import ThreadPoolExecutor
 os.environ["DASHSCOPE_API_KEY"]=os.getenv("api_key")
 class Context(ABC):
     """上下文抽象基类，所有具体上下文必须实现读写方法。"""
@@ -212,8 +213,8 @@ class MemoryContext(Context):
         # 从配置初始化 Mem0
         self.memory=  Memory.from_config(config)
         self.tmp_file =self._get_subdir("memory")/ "tmp.txt"
-        from concurrent.futures import ThreadPoolExecutor
-        self.executor = ThreadPoolExecutor(max_workers=2) 
+        
+        self.executor = ThreadPoolExecutor(max_workers=8) 
  
     def read(self, query,limit=10, **kwargs) -> Any:
         """
@@ -262,6 +263,8 @@ class ToolContext(Context):
         embedding_model = DashScopeEmbeddings(model="text-embedding-v3")
         self.vector_db = Chroma(persist_directory=str(self.tool_dir/"db") ,embedding_function=embedding_model)
         self.name="tool"
+        self.tmp_file =self._get_subdir("tool")/ "tmp.txt"
+        self.executor = ThreadPoolExecutor(max_workers=8) 
     def read(self, query) -> Any:
         """
         读取与查询语义相似的工具调用历史记录。
@@ -283,6 +286,21 @@ class ToolContext(Context):
             results.append(msg)
         return results      
 
+    def my_write(self,limit=3) -> None:
+        def count_lines(filename):
+            """返回文件的行数"""
+            with open(filename, 'r', encoding='utf-8') as f:
+                return sum(1 for _ in f)
+        if count_lines(self.tmp_file) >= limit:   
+            with open(self.tmp_file, "r", encoding="utf-8") as f:
+                lines=f.readlines()
+                lines=[json.loads(line.strip()) for line in lines if line.strip() and len(line.strip())>0]
+            docs = [Document(page_content=data['page_content'],metadata=data['metadata']) for data in lines]
+            self.vector_db.add_documents(docs)
+            self.vector_db.persist()
+            # 清空临时文件
+            open(self.tmp_file, "w", encoding="utf-8").close()
+
     def write(self, msgs, **kwargs) -> None:
  
         content=[message_to_role_content(s)['content'] for s in msgs if str(type(s)) == "<class 'langchain_core.messages.tool.ToolMessage'>"]
@@ -294,10 +312,12 @@ class ToolContext(Context):
             return
         content=content[0]
         time=datetime.now().strftime("%Y-%m-%d %H:%M:%S")
-        doc = Document(page_content=query,metadata={"output":content,"time":time,'tool_name':tool_name})
-        #print (doc)
-        self.vector_db.add_documents([doc])
-        self.vector_db.persist()
+        data={"page_content":query,"metadata":{"output":content,"time":time,'tool_name':tool_name}}
+        with open(self.tmp_file, "a", encoding="utf-8") as f:
+            f.writelines(json.dumps(data,ensure_ascii=False) + "\n")
+        self.executor.submit(self.my_write)
+
+        
 
 
 class ProfileContext(Context):
@@ -306,8 +326,8 @@ class ProfileContext(Context):
     def __init__(self, userid: str, agentid: str):
         super().__init__(userid, agentid)
         self.tmp_file =self._get_subdir("profile")/ "tmp.txt"
-        from concurrent.futures import ThreadPoolExecutor
-        self.executor = ThreadPoolExecutor(max_workers=2) 
+ 
+        self.executor = ThreadPoolExecutor(max_workers=8) 
         self.profile_dir = self._get_subdir("profile")
         self.name="profile"
  
