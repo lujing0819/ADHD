@@ -407,37 +407,4 @@ class ContextManager:
             self._contexts[key] = context_class(userid, agentid)
         return self._contexts[key]
 
-
-# ========== 使用示例 ==========
-if __name__ == "__main__":
-    pass
-    # 创建具体上下文
-    # # history = HistoryContext("user123", "agentA")
-    # # history.write({"role": "user", "content": "Hello"})
-    # # history.write({"role": "assistant", "content": "Hi there!"})
-    # # print("History:", history.read())
-    
-    # memory = MemoryContext("user123", "agentA")
-    # #{"role":"user","content":user_input}, {"role":"assistant","content":last_message.content}
-    # memory.write({"role": "user", "content": "你好，我今天的肚子特别疼，请问那里有药店"})
-    # memory.write({"role": "user", "content": "中国的首都是北京"})
-    # memory.write({"role": "user", "content": "我现在在上海"})
-    # print ("aaa")
-
-    # #print (memory.memory.get_all(user_id="user123"))
-    # #print("Memory (name):", memory.read("中国"))
-    
-    # # tool = ToolContext("user123", "agentA")
-    # # tool.write({"tool": "weather", "args": {"city": "Beijing"}, "result": "Sunny"})
-    # # print("Tool calls:", tool.read())
-    
-    # # profile = ProfileContext("user123", "agentA")
-    # # profile.write("language", "zh-CN")
-    # # print("Profile:", profile.read())
-    
-    # # 使用管理器
-    # manager = ContextManager()
-    # ctx1 = manager.get_context("user123", "agentA", "history")
-    # ctx1.write({"role": "user", "content": "Another message"})
-    # ctx2 = manager.get_context("user123", "agentA", "history")  # 相同键会返回同一个实例（如果有缓存）
-    # print("Same instance?", ctx1 is ctx2)  # True 如果缓存生效
+ 

@@ -10,7 +10,7 @@ from langchain_tavily import TavilySearch
 import os
 from langchain.agents import create_agent
 from langchain_core.messages import HumanMessage
-from langchain_core.tools import Tool
+from langchain_core.tools import Tool,tool
 from context import ContextList
 os.environ["TAVILY_API_KEY"] = "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"
  
@@ -20,21 +20,15 @@ os.environ["TAVILY_API_KEY"] = "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
 class AgentState(TypedDict):
     messages: Annotated[Sequence[BaseMessage], operator.add]
 
-# 初始化工具
-tool = TavilySearch(max_results=2)
-tools = [tool]
+
+tools = [TavilySearch(max_results=2)]
 
 user_id="123"
 agent_id="agent_001"
 ctx_List=ContextList(["history","memory","tool","profile"],agent_id,user_id)
 for ctx in ctx_List.ctx_list:
-    read_tool = Tool(
-        name=ctx.name+"_read_memory",                     # 工具名称，智能体会用它来调用
-        func=ctx.read,                # 绑定的实例方法
-        description=ctx.read.__doc__
-    )
+    read_tool=tool(ctx.read)
     tools.append(read_tool)
-
 agent = create_agent(
     model=llm,
     tools=tools,
